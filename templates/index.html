@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>计算器</title>
+  <style>
+    /* 请把该文件放在与py文件同一路径下，名为templates的文件夹内 */
+    /* 计算器的 CSS 样式 */
+    body {
+      background-color: pink;
+    }
+
+    .calculator {
+      width: 250px;
+      margin: 20px auto;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .calculator input[type="text"] {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 5px;
+      font-size: 18px;
+    }
+
+    .calculator button {
+      width: 40px;
+      height: 40px;
+      margin: 2px;
+      font-size: 18px;
+    }
+
+    .calculator button.operator {
+      background-color: #f0f0f0;
+    }
+
+    .calculator button#calculate-btn {
+      width: 100%;
+      background-color: #4caf50;
+      color: white;
+    }
+
+    .calculator #result {
+      font-size: 20px;
+      margin-top: 10px;
+    }
+
+    .history {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .history-item {
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <input type="text" id="expression" readonly>
+    <button onclick="appendCharacter('7')">7</button>
+    <button onclick="appendCharacter('8')">8</button>
+    <button onclick="appendCharacter('9')">9</button>
+    <button onclick="appendCharacter('+')">+</button>
+    <br>
+    <button onclick="appendCharacter('4')">4</button>
+    <button onclick="appendCharacter('5')">5</button>
+    <button onclick="appendCharacter('6')">6</button>
+    <button onclick="appendCharacter('-')">-</button>
+    <br>
+    <button onclick="appendCharacter('1')">1</button>
+    <button onclick="appendCharacter('2')">2</button>
+    <button onclick="appendCharacter('3')">3</button>
+    <button onclick="appendCharacter('*')">*</button>
+    <br>
+    <button onclick="appendCharacter('0')">0</button>
+    <button onclick="appendCharacter('.')">.</button>
+    <button onclick="appendCharacter(')')">)</button>
+    <button onclick="appendCharacter('/')">/</button>
+    <br>
+    <button onclick="calculate()">计算</button>
+    <button onclick="clearExpression()">清空</button>
+    <button onclick="calculateTrig('sin')">Sin</button>
+    <button onclick="calculateTrig('cos')">Cos</button>
+    <button onclick="calculateTrig('tan')">Tan</button>
+    <br>
+    <div id="result"></div>
+  </div>
+
+  <div class="history">
+    <h3>历史记录</h3>
+    <div id="historyList"></div>
+  </div>
+
+  <script>
+    // JavaScript 代码，处理计算器的逻辑和历史记录的显示
+
+    let expression = '';
+
+    // 将字符添加到表达式输入框中
+    function appendCharacter(character) {
+      expression += character;
+      document.getElementById('expression').value = expression;
+    }
+
+    // 清空表达式
+    function clearExpression() {
+      expression = '';
+      document.getElementById('expression').value = expression;
+    }
+
+    // 计算表达式
+    function calculate() {
+      const expressionToCalculate = expression;
+
+      // 向后端发送 POST 请求来计算表达式
+      fetch('/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ expression: expressionToCalculate })
+      })
+      .then(response => response.json())
+      .then(data => {
+        // 获取计算结果并显示在页面上
+        const result = data.result;
+        document.getElementById('result').textContent = '结果：' + result;
+
+        // 将表达式和结果添加到历史记录
+        const historyList = document.getElementById('historyList');
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.textContent = `${expressionToCalculate} = ${result}`;
+        historyList.insertBefore(historyItem, historyList.firstChild);
+
+        // 如果历史记录超过 10 条，则移除最旧的记录
+        if (historyList.childElementCount > 10) {
+          historyList.lastChild.remove();
+        }
+      })
+      .catch(error => {
+        console.error('计算请求出错：', error);
+      });
+    }
+
+    // 计算三角函数
+    function calculateTrig(trigFunction) {
+      const angle = parseFloat(expression);
+
+      // 根据选择的三角函数计算结果
+      let result;
+      if (trigFunction === 'sin') {
+        result = Math.sin(angle);
+      } else if (trigFunction === 'cos') {
+        result = Math.cos(angle);
+      } else if (trigFunction === 'tan') {
+        result = Math.tan(angle);
+      }
+
+      // 显示计算结果
+      document.getElementById('result').textContent = `${trigFunction.toUpperCase()}(${angle}) = ${result}`;
+    }
+
+    // 加载初始的历史记录
+    function loadHistory() {
+      // 向后端发送 GET 请求来获取历史记录
+      fetch('/history')
+      .then(response => response.json())
+      .then(data => {
+        // 显示历史记录
+        const historyList = document.getElementById('historyList');
+        data.history.forEach(item => {
+          const historyItem = document.createElement('div');
+          historyItem.className = 'history-item';
+          historyItem.textContent = item;
+          historyList.appendChild(historyItem);
+        });
+      })
+      .catch(error => {
+        console.error('获取历史记录出错：', error);
+      });
+    }
+
+    // 页面加载完成后加载历史记录
+    window.onload = loadHistory;
+  </script>
+</body>
+</html>
